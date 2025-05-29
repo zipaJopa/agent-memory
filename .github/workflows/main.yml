@@ -1,0 +1,41 @@
+name: Agent Memory Processing
+
+on:
+  schedule:
+    - cron: '0 * * * *' # Runs every hour at the start of the hour
+  workflow_dispatch: {} # Allows manual triggering
+
+jobs:
+  process_memory_embeddings:
+    name: Process Pending Embeddings
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write # Needed by memory_manager.py to commit vector_store.json and manage pending/processed files
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11' # Consistent with other constellation components
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          if [ -f requirements.txt ]; then
+            echo "Found requirements.txt, installing dependencies from it."
+            pip install -r requirements.txt
+          else
+            echo "requirements.txt not found. Installing default dependencies: requests, sentence-transformers, numpy."
+            pip install requests sentence-transformers numpy
+          fi
+        # memory_manager.py requires 'requests' (for GitHubInteraction), 
+        # 'sentence-transformers' for creating embeddings, and 'numpy' (often a dependency, but good to ensure).
+        # A requirements.txt in the agent-memory repo should list these.
+
+      - name: Run Memory Manager Script
+        env:
+          GITHUB_TOKEN: ${{ secrets.GH_PAT }} # PAT with repo scope for committing changes
+        run: python memory_manager.py

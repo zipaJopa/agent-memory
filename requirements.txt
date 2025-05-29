@@ -1,0 +1,3 @@
+requests
+sentence-transformers
+numpy
